@@ -1,24 +1,16 @@
 import { useProd } from "../Products-Page/product-context";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { useState } from "react";
-import { useProdReducer } from "../Products-Page/product-reducer";
-import { useCartAndWishlistQuantity } from "../Cart-Wishlist-Provider/cart-wishlist-provider";
+import { useState, useEffect } from "react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export const WishList = () => {
   const { itemsInProduct } = useProd();
 
-  const { productDispatch } = useProdReducer();
-
   const { username } = JSON.parse(localStorage.getItem("username")) || {
     username: null
   };
-  const {
-    cartTotalQuantity,
-    wishListQuantity,
-    setWishListQuantity,
-    setCartQuantity
-  } = useCartAndWishlistQuantity();
 
   const { wishlistObj } = JSON.parse(localStorage.getItem("wishlistObj")) || {
     wishlistObj: []
@@ -32,108 +24,154 @@ export const WishList = () => {
 
   const [cart, setCart] = useState(cartlistObj);
 
-  const [popUp, setPopUp] = useState("none");
+  const [quantity, setQuantity] = useState({
+    cartquantity: cartlistObj.length,
+    wishlistquantity: wishlistObj.length
+  });
 
-  async function CallCart() {
-    if (username) {
-      axios
-        .post("https://e-commerce.sandeepmehta215.repl.co/signup/cart", {
-          username: username
-        })
-        .then((resp) => {
-          setPopUp("none");
+  const notifyCart = () =>
+    toast.success("Updating Cart", {
+      position: "bottom-center",
+      autoClose: 2000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined
+    });
 
-          if (typeof resp.data.cart === "object") {
-            localStorage.setItem(
-              "cartlistObj",
-              JSON.stringify({ cartlistObj: resp.data.cart })
-            );
+  const notifyWishlist = () =>
+    toast.success("Updating Wishlist", {
+      position: "bottom-center",
+      autoClose: 2000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined
+    });
 
-            setCart(resp.data.cart);
+  async function RemoveFromCart(_id) {
+    notifyCart();
+    const response = await axios.post(
+      "https://e-commerce.sandeepmehta215.repl.co/updatecart/removefromcart",
+      {
+        username: username,
+        cartids: _id
+      }
+    );
 
-            setCartQuantity(resp.data.cart.length);
+    if (typeof response.data.cart === "object") {
+      localStorage.setItem(
+        "cartlistObj",
+        JSON.stringify({ cartlistObj: response.data.cart })
+      );
+    }
 
-            localStorage.setItem(
-              "cartlistLength",
-              JSON.stringify({ cartLength: resp.data.cart.length })
-            );
-          } else {
-            setCart([]);
-          }
-        });
+    localStorage.setItem(
+      "cartlistLength",
+      JSON.stringify({ cartLength: response.data.cart.length })
+    );
+
+    setQuantity({ ...quantity, cartquantity: response.data.cart.length });
+    setCart(response.data.cart);
+  }
+
+  async function AddToCart(_id) {
+    notifyCart();
+    const response = await axios.post(
+      "https://e-commerce.sandeepmehta215.repl.co/updatecart/addtocart",
+      {
+        username: username,
+        cartids: _id
+      }
+    );
+
+    if (typeof response.data.cart === "object") {
+      localStorage.setItem(
+        "cartlistObj",
+        JSON.stringify({ cartlistObj: response.data.cart })
+      );
+    }
+
+    localStorage.setItem(
+      "cartlistLength",
+      JSON.stringify({ cartLength: response.data.cart.length })
+    );
+
+    setQuantity({ ...quantity, cartquantity: response.data.cart.length });
+    setCart(response.data.cart);
+  }
+
+  async function RemoveFromWishlist(_id) {
+    notifyWishlist();
+    const response = await axios.post(
+      "https://e-commerce.sandeepmehta215.repl.co/updatewishlist/removefromwishlist",
+      {
+        username: username,
+        wishlistids: _id
+      }
+    );
+
+    if (typeof response.data.wishlist === "object") {
+      localStorage.setItem(
+        "wishlistObj",
+        JSON.stringify({ wishlistObj: response.data.wishlist })
+      );
+
+      setWishlist(response.data.wishlist);
+
+      setQuantity({
+        ...quantity,
+        wishlistquantity: response.data.wishlist.length
+      });
+
+      localStorage.setItem(
+        "wishlistLength",
+        JSON.stringify({ wishlistLength: response.data.wishlist.length })
+      );
+    } else {
+      setWishlist([]);
     }
   }
 
-  async function CallWishList() {
-    if (username)
-      await axios
-        .post("https://e-commerce.sandeepmehta215.repl.co/signup/wishlist", {
-          username: username
-        })
-        .then((resp) => {
-          if (typeof resp.data.wishlist === "object") {
-            localStorage.setItem(
-              "wishlistObj",
-              JSON.stringify({ wishlistObj: resp.data.wishlist })
-            );
-
-            setWishlist(resp.data.wishlist);
-
-            setPopUp("none");
-
-            localStorage.setItem(
-              "wishlistLength",
-              JSON.stringify({ wishlistLength: resp.data.wishlist.length })
-            );
-
-            setWishListQuantity(resp.data.wishlist.length);
-          } else {
-            setWishlist([]);
+  useEffect(
+    () =>
+      (async function () {
+        const responseForWishlist = await axios.post(
+          "https://e-commerce.sandeepmehta215.repl.co/updatewishlist",
+          {
+            username: username
           }
-        });
-  }
+        );
 
-  // useEffect(() => {
-  //   if (username)
-  //     axios
-  //       .post("https://e-commerce.sandeepmehta215.repl.co/signup/wishlist", {
-  //         username: username
-  //       })
-  //       .then((resp) => {
-  //         if (typeof resp.data.wishlist === "object") {
-  //           // localStorage.setItem(
-  //           //   "wishlistObj",
-  //           //   JSON.stringify({ wishlistObj: resp.data.wishlist })
-  //           // );
-
-  //           setWishlist(resp.data.wishlist);
-
-  //           localStorage.setItem(
-  //             "wishlistLength",
-  //             JSON.stringify({ wishlistLength: resp.data.wishlist.length })
-  //           );
-  //           setPopUp("none");
-  //           setWishListQuantity(resp.data.wishlist.length);
-  //         } else {
-  //           setWishlist([]);
-  //         }
-  //       });
-  // }, [popUp]);
+        const responseForCart = await axios.post(
+          "https://e-commerce.sandeepmehta215.repl.co/updatecart",
+          {
+            username: username
+          }
+        );
+        if (username) {
+          setCart(responseForCart.data.cart);
+          setWishlist(responseForWishlist.data.wishlist);
+        }
+      })(),
+    []
+  );
 
   return (
     <>
       <div className="cartTotalQuantity">
-        <strong>{cartTotalQuantity}</strong>
+        <strong>{quantity.cartquantity}</strong>
       </div>
       <div className="wishListTotalQuantity">
-        <strong>{wishListQuantity}</strong>
+        <strong>{quantity.wishlistquantity}</strong>
       </div>
+      <ToastContainer />
       <>
         <div className="wishListPage">
           <h2> Your Wishlist </h2>
-          <div className="snackBar" style={{ display: popUp }}>
-            Updating Wishlist.....
-          </div>
+
           {!username && (
             <div className="cartEmptyCard">
               <h3> Please Login to view WishList</h3>
@@ -164,7 +202,7 @@ export const WishList = () => {
               </Link>
             </div>
           )}
-          {username && wishListQuantity === 0 && (
+          {username && quantity.wishlistquantity === 0 && (
             <div className="cartEmptyCard">
               <h3> Please Add Items to WishList</h3>
 
@@ -194,14 +232,14 @@ export const WishList = () => {
               </Link>
             </div>
           )}
-          <div>
+          <ul>
             {itemsInProduct.map((obj) => {
               return (
                 <ul>
                   {wishlist
                     .map((wishlistObj) => {
                       if (wishlistObj !== obj.id) return obj;
-                      // else return obj;
+                      return undefined;
                     })
                     .filter((key) => key !== undefined).length <
                   wishlist.length ? (
@@ -241,60 +279,45 @@ export const WishList = () => {
                           </span>
                         </div>
                         <br />
-                        <button
-                          className="wishListbi-trashButton"
-                          onClick={() => {
-                            setPopUp("block");
+                        {cart
+                          .map((cartObj) => {
+                            if (cartObj.cartid !== obj.id) return obj;
+                            // else return obj;
+                          })
+                          .filter((key) => key !== undefined).length <
+                        cart.length ? (
+                          <button
+                            className="wishListbi-trashButton"
+                            onClick={() => {
+                              RemoveFromCart(obj.id);
+                            }}
+                          >
+                            Remove From Cart
+                          </button>
+                        ) : (
+                          <button
+                            className="wishListbi-trashButton"
+                            onClick={() => {
+                              AddToCart(obj.id);
+                            }}
+                          >
+                            Add to cart
+                            <span role="img" aria-labelledby="cart">
+                              🛒
+                            </span>
+                          </button>
+                        )}
 
-                            productDispatch({ type: "ADD_TO_CART", obj });
-
-                            setTimeout(() => CallCart(), 800);
-                          }}
-                        >
-                          Add to cart
-                          <span role="img" aria-labelledby="cart">
-                            🛒
-                          </span>
-                        </button>
-                        <button
-                          className="wishListbi-trashButton"
-                          onClick={() => {
-                            setPopUp("block");
-
-                            productDispatch({
-                              type: "REMOVE_FROM_CART",
-                              obj
-                            });
-
-                            setTimeout(() => CallCart(), 800);
-                          }}
-                        >
-                          Remove From Cart
-                        </button>
                         <button
                           className="wishListbi-wishListHeartButton"
                           onClick={() => {
-                            setPopUp("block");
-
-                            productDispatch({
-                              type: "REMOVE_FROM_WISHLIST",
-                              obj
-                            });
-
-                            setTimeout(() => CallWishList(), 800);
+                            RemoveFromWishlist(obj.id);
                           }}
                         >
                           <span
                             className="love active"
                             onClick={() => {
-                              setPopUp("block");
-
-                              productDispatch({
-                                type: "REMOVE_FROM_WISHLIST",
-                                obj
-                              });
-
-                              setTimeout(() => CallWishList(), 800);
+                              RemoveFromWishlist(obj.id);
                             }}
                           >
                             <span className="drop"></span>
@@ -329,11 +352,7 @@ export const WishList = () => {
                 </ul>
               );
             })}
-          </div>
-          <span style={{ visibility: "hidden" }}>
-            {popUp === "block" && (document.body.style.opacity = 0.7)}
-            {popUp === "none" && (document.body.style.opacity = 1)}
-          </span>
+          </ul>
         </div>
       </>
     </>

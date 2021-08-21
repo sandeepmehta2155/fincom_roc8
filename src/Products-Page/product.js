@@ -1,23 +1,16 @@
-import { useFilter } from "./filter-context";
+import { useEffect, useState } from "react";
 import { useProd } from "./product-context";
-import { useProdReducer } from "./product-reducer";
-import Select from "react-select";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useCartAndWishlistQuantity } from "../Cart-Wishlist-Provider/cart-wishlist-provider";
+import { useFilter } from "./filter-context";
+import Select from "react-select";
+import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-export const Products = () => {
+export const Product = () => {
   const [filterModal, setFilterModal] = useState("none");
   const [sortModal, setSortModal] = useState("none");
   const navigate = useNavigate();
-
-  const {
-    cartTotalQuantity,
-    setCartQuantity,
-    wishListQuantity,
-    setWishListQuantity
-  } = useCartAndWishlistQuantity();
 
   const {
     fastDelvry,
@@ -31,7 +24,6 @@ export const Products = () => {
   } = useFilter();
 
   const { itemsInProduct } = useProd();
-  const { productDispatch } = useProdReducer();
 
   const { username } = JSON.parse(localStorage.getItem("username")) || {
     username: null
@@ -52,84 +44,187 @@ export const Products = () => {
     cartlistObj: []
   };
 
+  const [quantity, setQuantity] = useState({
+    cartquantity: cartlistObj.length,
+    wishlistquantity: wishlistObj.length
+  });
+
   const [cart, setCart] = useState(cartlistObj);
 
-  const [popUp, setPopUp] = useState("none");
+  const notifyCart = () =>
+    toast.success("Updating Cart", {
+      position: "bottom-center",
+      autoClose: 2000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined
+    });
 
-  async function CallWishList() {
-    if (username)
-      axios
-        .post("https://e-commerce.sandeepmehta215.repl.co/signup/wishlist", {
-          username: username
-        })
-        .then((resp) => {
-          setPopUp("none");
+  const notifyWishlist = () =>
+    toast.success("Updating Wishlist", {
+      position: "bottom-center",
+      autoClose: 2000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined
+    });
 
-          if (typeof resp.data.wishlist === "object") {
-            localStorage.setItem(
-              "wishlistObj",
-              JSON.stringify({ wishlistObj: resp.data.wishlist })
-            );
+  async function AddToCart(_id) {
+    notifyCart();
+    const response = await axios.post(
+      "https://e-commerce.sandeepmehta215.repl.co/updatecart/addtocart",
+      {
+        username: username,
+        cartids: _id
+      }
+    );
 
-            setWishlist(resp.data.wishlist);
+    if (typeof response.data.cart === "object") {
+      localStorage.setItem(
+        "cartlistObj",
+        JSON.stringify({ cartlistObj: response.data.cart })
+      );
+    }
 
-            localStorage.setItem(
-              "wishlistLength",
-              JSON.stringify({ wishlistLength: resp.data.wishlist.length })
-            );
+    localStorage.setItem(
+      "cartlistLength",
+      JSON.stringify({ cartLength: response.data.cart.length })
+    );
 
-            setWishListQuantity(resp.data.wishlist.length);
-          } else {
-            setWishlist([]);
-          }
-        });
+    setQuantity({ ...quantity, cartquantity: response.data.cart.length });
+    setCart(response.data.cart);
   }
 
-  async function CallCart() {
-    if (username) {
-      axios
-        .post("https://e-commerce.sandeepmehta215.repl.co/signup/cart", {
-          username: username
-        })
-        .then((resp) => {
-          setPopUp("none");
+  async function RemoveFromCart(_id) {
+    notifyCart();
+    const response = await axios.post(
+      "https://e-commerce.sandeepmehta215.repl.co/updatecart/removefromcart",
+      {
+        username: username,
+        cartids: _id
+      }
+    );
 
-          if (typeof resp.data.cart === "object") {
-            localStorage.setItem(
-              "cartlistObj",
-              JSON.stringify({ cartlistObj: resp.data.cart })
-            );
+    if (typeof response.data.cart === "object") {
+      localStorage.setItem(
+        "cartlistObj",
+        JSON.stringify({ cartlistObj: response.data.cart })
+      );
+    }
 
-            setCart(resp.data.cart);
+    localStorage.setItem(
+      "cartlistLength",
+      JSON.stringify({ cartLength: response.data.cart.length })
+    );
 
-            setCartQuantity(resp.data.cart.length);
+    setQuantity({ ...quantity, cartquantity: response.data.cart.length });
+    setCart(response.data.cart);
+  }
 
-            localStorage.setItem(
-              "cartlistLength",
-              JSON.stringify({ cartLength: resp.data.cart.length })
-            );
-          } else {
-            setCart([]);
-          }
-        });
+  async function AddToWishlist(_id) {
+    notifyWishlist();
+    const response = await axios.post(
+      "https://e-commerce.sandeepmehta215.repl.co/updatewishlist/addtowishlist",
+      {
+        username: username,
+        wishlistids: _id
+      }
+    );
+
+    if (typeof response.data.wishlist === "object") {
+      localStorage.setItem(
+        "wishlistObj",
+        JSON.stringify({ wishlistObj: response.data.wishlist })
+      );
+
+      setWishlist(response.data.wishlist);
+
+      localStorage.setItem(
+        "wishlistLength",
+        JSON.stringify({ wishlistLength: response.data.wishlist.length })
+      );
+
+      setQuantity({
+        ...quantity,
+        wishlistquantity: response.data.wishlist.length
+      });
+    } else {
+      setWishlist([]);
     }
   }
+
+  async function RemoveFromWishlist(_id) {
+    notifyWishlist();
+    const response = await axios.post(
+      "https://e-commerce.sandeepmehta215.repl.co/updatewishlist/removefromwishlist",
+      {
+        username: username,
+        wishlistids: _id
+      }
+    );
+
+    if (typeof response.data.wishlist === "object") {
+      localStorage.setItem(
+        "wishlistObj",
+        JSON.stringify({ wishlistObj: response.data.wishlist })
+      );
+
+      setWishlist(response.data.wishlist);
+
+      setQuantity({
+        ...quantity,
+        wishlistquantity: response.data.wishlist.length
+      });
+
+      localStorage.setItem(
+        "wishlistLength",
+        JSON.stringify({ wishlistLength: response.data.wishlist.length })
+      );
+    } else {
+      setWishlist([]);
+    }
+  }
+
+  useEffect(
+    () =>
+      (async function () {
+        const responseForWishlist = await axios.post(
+          "https://e-commerce.sandeepmehta215.repl.co/updatewishlist",
+          {
+            username: username
+          }
+        );
+
+        const responseForCart = await axios.post(
+          "https://e-commerce.sandeepmehta215.repl.co/updatecart",
+          {
+            username: username
+          }
+        );
+        if (username) {
+          setCart(responseForCart.data.cart);
+          setWishlist(responseForWishlist.data.wishlist);
+        }
+      })(),
+    []
+  );
 
   return (
     <>
       <div className="cartTotalQuantity">
-        <strong>{cartTotalQuantity}</strong>
+        <strong>{quantity.cartquantity}</strong>
       </div>
       <div className="wishListTotalQuantity">
-        <strong>{wishListQuantity}</strong>
+        <strong>{quantity.wishlistquantity}</strong>
       </div>
       <>
         <h1 className="productsHead">Books in focus</h1>
 
         <br />
-        <div className="snackBar" style={{ display: popUp }}>
-          Updating Wishlist.....
-        </div>
 
         <div className="productMainPage">
           <div className="filterSideBar">
@@ -188,6 +283,7 @@ export const Products = () => {
                 }}
               />
             </span>
+            <ToastContainer />
             <ul className="productList">
               {itemsInProduct
                 .filter((obj) => {
@@ -224,16 +320,9 @@ export const Products = () => {
                               <span
                                 className="love active"
                                 onClick={() => {
-                                  setPopUp("block");
-
                                   username
-                                    ? productDispatch({
-                                        type: "REMOVE_FROM_WISHLIST",
-                                        obj
-                                      })
+                                    ? RemoveFromWishlist(obj.id)
                                     : navigate("/login");
-
-                                  setTimeout(() => CallWishList(), 800);
                                 }}
                               >
                                 <span className="drop"></span>
@@ -263,16 +352,9 @@ export const Products = () => {
                               <span
                                 className="love"
                                 onClick={() => {
-                                  setPopUp("block");
-
                                   username
-                                    ? productDispatch({
-                                        type: "ADD_TO_WISHLIST",
-                                        obj
-                                      })
+                                    ? AddToWishlist(obj.id)
                                     : navigate("/login");
-
-                                  setTimeout(() => CallWishList(), 800);
                                 }}
                               >
                                 <span className="drop"></span>
@@ -306,26 +388,39 @@ export const Products = () => {
                             src={obj.src}
                             alt="loading.."
                           />
-                          <button
-                            className="card-button"
-                            onClick={() => {
-                              setPopUp("block");
-                              username
-                                ? productDispatch({
-                                    type: "ADD_TO_CART",
-                                    obj
-                                  })
-                                : navigate("/login");
+                          {cart
+                            .map((cartObj) => {
+                              if (cartObj.cartid !== obj.id) return obj;
+                              // else return obj;
+                            })
+                            .filter((key) => key !== undefined).length <
+                          cart.length ? (
+                            <button
+                              className="cartButtonProducts"
+                              onClick={() => {
+                                username
+                                  ? RemoveFromCart(obj.id)
+                                  : navigate("/login");
+                              }}
+                            >
+                              Remove From Cart
+                            </button>
+                          ) : (
+                            <button
+                              className="cartButtonProducts"
+                              onClick={() => {
+                                username
+                                  ? AddToCart(obj.id)
+                                  : navigate("/login");
+                              }}
+                            >
+                              Add to cart
+                              <span role="img" aria-labelledby="cart">
+                                🛒
+                              </span>
+                            </button>
+                          )}
 
-                              setTimeout(() => CallCart(), 800);
-                            }}
-                          >
-                            Add to Cart{" "}
-                            <span role="img" aria-labelledby="cart">
-                              {" "}
-                              🛒
-                            </span>
-                          </button>
                           <div className="card-title">{obj.name}</div>
                           <div className="card-price">
                             Rs {obj.price}
@@ -338,7 +433,7 @@ export const Products = () => {
                       </div>
                     </li>
                   );
-                })}
+                })}{" "}
             </ul>
           </div>
           <div className="filterBox">
@@ -429,10 +524,6 @@ export const Products = () => {
               </svg>
             </button>
           </div>
-          <span style={{ visibility: "hidden" }}>
-            {popUp === "block" && (document.body.style.opacity = 0.8)}
-            {popUp === "none" && (document.body.style.opacity = 1)}
-          </span>
         </div>
       </>
     </>
