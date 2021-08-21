@@ -1,50 +1,62 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
 export function Subscription() {
   const [firstNameAndLastName, setFirstNameAndLastName] = useState("");
+  const [nameValidation, setNameValidation] = useState("none");
 
   const [userName, setUserName] = useState("");
+  const [userNameValidation, setUserNameValidation] = useState("none");
   const [passwordInput, setUserPassword] = useState("");
   const [passwordReInput, setpasswordReInput] = useState("");
   const [emailInput, setEmailInput] = useState("");
+  const [emailValidation, setEmailValidation] = useState("none");
 
   const [emailExists, setEmailExists] = useState("none");
   const [userExists, setUserExists] = useState("none");
   const [userAdded, setUserAdded] = useState("none");
 
   const [type, setType] = useState("password");
-  const [responseFromDataBase, setResponseFromDataBase] = useState("");
 
   const reg = /([0-9])/;
 
-  useEffect(() => {
-    setUserExists("block");
-    responseFromDataBase === "user Exists for given username"
-      ? setUserExists("block")
-      : setUserExists("none");
-
-    reg.test(passwordInput) &&
-    passwordInput === passwordReInput &&
-    responseFromDataBase === "user added in database"
-      ? setUserAdded("block")
-      : setUserAdded("none");
-
-    responseFromDataBase === "email Exists for given username"
-      ? setEmailExists("block")
-      : setEmailExists("none");
-  }, [responseFromDataBase]);
-
   async function setResponseFromDB() {
-    await axios
-      .post("https://e-commerce.sandeepmehta215.repl.co/signup", {
+    const response = await axios.post(
+      "https://e-commerce.sandeepmehta215.repl.co/signup",
+      {
         fullname: firstNameAndLastName,
         username: userName,
         email: emailInput,
         password: passwordInput
-      })
-      .then((response) => setResponseFromDataBase(response.data.message));
+      }
+    );
+
+    console.log(response.data.message);
+
+    response.data.message === "enter valid email"
+      ? setEmailValidation("block")
+      : setEmailValidation("none");
+
+    response.data.message === "enter valid name"
+      ? setNameValidation("block")
+      : setNameValidation("none");
+
+    response.data.message === "enter valid username"
+      ? setUserNameValidation("block")
+      : setUserNameValidation("none");
+
+    response.data.message === "user Exists for given username"
+      ? setUserExists("block")
+      : setUserExists("none");
+
+    response.data.message === "user added in database"
+      ? setUserAdded("block")
+      : setUserAdded("none");
+
+    response.data.message === "email Exists for given username"
+      ? setEmailExists("block")
+      : setEmailExists("none");
   }
 
   return (
@@ -59,6 +71,10 @@ export function Subscription() {
       />
       <br />
       <br />
+      <small style={{ color: "red", display: nameValidation }}>
+        Enter valid name
+      </small>
+
       <br />
       <label>Enter your user-name : </label>
       <input
@@ -68,7 +84,10 @@ export function Subscription() {
         onChange={(e) => setUserName(e.target.value)}
       />
       <br />
-
+      <br />
+      <small style={{ color: "red", display: userNameValidation }}>
+        Enter valid username
+      </small>
       <small style={{ color: "red", display: userExists }}>User exists</small>
 
       <br />
@@ -81,8 +100,12 @@ export function Subscription() {
         onChange={(e) => setEmailInput(e.target.value)}
       />
       <br />
-      <small style={{ color: "red", display: emailExists }}>Email exists</small>
       <br />
+      <small style={{ color: "red", display: emailValidation }}>
+        Enter valid email
+      </small>
+      <small style={{ color: "red", display: emailExists }}>Email exists</small>
+
       <br />
 
       <label>Enter your password : </label>
@@ -140,7 +163,6 @@ export function Subscription() {
       >
         Sign Up
       </button>
-      {console.log(userAdded)}
       <span style={{ color: "green", display: userAdded }}>
         User Added in database
         <span role="img" aria-labelledby="emoji">

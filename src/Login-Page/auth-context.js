@@ -1,4 +1,4 @@
-import { createContext, useEffect, useContext, useState } from "react";
+import { createContext, useContext, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 
@@ -13,30 +13,10 @@ export function AuthProvider({ children }) {
 
   const [isUserLoggedIn, setUserLogin] = useState(login);
 
-  const [checkResponseFromDataBase, setResponseFromDataBase] = useState("");
-
   const [userExists, setUserExists] = useState("none");
   const [checkPassword, setCheckPassword] = useState("none");
 
   const navigate = useNavigate();
-
-  useEffect(() => {
-    setUserExists("block");
-
-    checkResponseFromDataBase === "Req can't be made"
-      ? setUserExists("block")
-      : setUserExists("none");
-
-    checkResponseFromDataBase === "wrong password"
-      ? setCheckPassword("block")
-      : setCheckPassword("none");
-
-    if (checkResponseFromDataBase === "user auth successful") {
-      setUserLogin(true);
-
-      localStorage.setItem("login", JSON.stringify({ login: true }));
-    }
-  }, [checkResponseFromDataBase]);
 
   function LogOut() {
     setUserLogin(false);
@@ -51,56 +31,58 @@ export function AuthProvider({ children }) {
     navigate("/");
   }
 
-  function LoginUserWithCredentials(userName, passwordInput) {
-    (async function () {
-      axios
-        .post("https://e-commerce.sandeepmehta215.repl.co/userauth", {
-          username: userName,
-          password: passwordInput
+  async function LoginUserWithCredentials(userName, passwordInput) {
+    setUserExists("none");
+    setCheckPassword("none");
+
+    const response = await axios.get(
+      `https://e-commerce.sandeepmehta215.repl.co/userauth/${userName}?password=${passwordInput}`
+    );
+
+    if (response.data.message === "user auth is successful") {
+      localStorage.setItem(
+        "wishlistObj",
+        JSON.stringify({
+          wishlistObj: response.data.wishlistids
         })
-        .then((response) => {
-          setResponseFromDataBase(response.data.message);
-          if (response.data.message === "user auth successful") {
-            // console.log(response);
-            localStorage.setItem(
-              "wishlistObj",
-              JSON.stringify({
-                wishlistObj: response.data.wishlist
-              })
-            );
+      );
+      localStorage.setItem(
+        "wishlistLength",
+        JSON.stringify({
+          wishlistLength: response.data.wishlistids.length
+        })
+      );
+      localStorage.setItem(
+        "cartlistObj",
+        JSON.stringify({
+          cartlistObj: response.data.cartids
+        })
+      );
+      localStorage.setItem(
+        "cartlistLength",
+        JSON.stringify({
+          cartlistLength: response.data.cartids.length
+        })
+      );
+      localStorage.setItem(
+        "username",
+        JSON.stringify({
+          username: response.data.username
+        })
+      );
 
-            localStorage.setItem(
-              "wishlistLength",
-              JSON.stringify({
-                wishlistLength: response.data.wishlist.length
-              })
-            );
+      setTimeout(() => {
+        navigate("/products");
+      }, 1000);
+    }
 
-            localStorage.setItem(
-              "cartlistObj",
-              JSON.stringify({
-                cartlistObj: response.data.cart
-              })
-            );
-            localStorage.setItem(
-              "cartlistLength",
-              JSON.stringify({
-                cartlistLength: response.data.cart.length
-              })
-            );
+    response.data.message === "invalid username"
+      ? setUserExists("block")
+      : setUserExists("none");
 
-            localStorage.setItem(
-              "username",
-              JSON.stringify({
-                username: response.data.username
-              })
-            );
-            setTimeout(() => {
-              navigate("/products");
-            }, 800);
-          }
-        });
-    })();
+    response.data.message === "invalid password"
+      ? setCheckPassword("block")
+      : setCheckPassword("none");
   }
 
   return (

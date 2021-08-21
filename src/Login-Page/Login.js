@@ -2,8 +2,6 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "./auth-context";
 
-import { useCartAndWishlistQuantity } from "../Cart-Wishlist-Provider/cart-wishlist-provider";
-
 export function Login() {
   const [passwordInput, setUserPassword] = useState("");
   const {
@@ -11,19 +9,20 @@ export function Login() {
     LogOut,
     LoginUserWithCredentials,
     userExists,
-    checkPassword,
-    setUserExists,
-    setCheckPassword
+    checkPassword
   } = useAuth();
 
   const [userName, setUserName] = useState();
-  const { cartTotalQuantity, wishListQuantity } = useCartAndWishlistQuantity();
+
+  const { wishlistObj } = JSON.parse(localStorage.getItem("wishlistObj")) || {
+    wishlistObj: []
+  };
+
+  const { cartlistObj } = JSON.parse(localStorage.getItem("cartlistObj")) || {
+    cartlistObj: []
+  };
 
   function LoginHandler() {
-    userName ? setUserExists("none") : setUserExists("block");
-
-    passwordInput ? setCheckPassword("none") : setCheckPassword("block");
-
     return isUserLoggedIn
       ? LogOut()
       : LoginUserWithCredentials(userName, passwordInput);
@@ -34,10 +33,10 @@ export function Login() {
       {isUserLoggedIn && (
         <>
           <div className="cartTotalQuantity">
-            <strong>{cartTotalQuantity}</strong>
+            <strong>{cartlistObj.length}</strong>
           </div>
           <div className="wishListTotalQuantity">
-            <strong>{wishListQuantity}</strong>
+            <strong>{wishlistObj.length}</strong>
           </div>
         </>
       )}
