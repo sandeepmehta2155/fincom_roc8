@@ -1,31 +1,20 @@
 import { Link } from "react-router-dom";
 import { useProd } from "../Products-Page/product-context";
-import { useProdReducer } from "../Products-Page/product-reducer";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
-import { useCartAndWishlistQuantity } from "../Cart-Wishlist-Provider/cart-wishlist-provider";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export const Cart = () => {
   const { itemsInProduct } = useProd();
-
-  const { productDispatch } = useProdReducer();
-
-  const {
-    cartTotalQuantity,
-    setCartQuantity,
-    wishListQuantity,
-    setWishListQuantity
-  } = useCartAndWishlistQuantity();
 
   const { username } = JSON.parse(localStorage.getItem("username")) || {
     username: null
   };
 
-  const [popUp, setPopUp] = useState("none");
-
-  const { wishlistObj } = JSON.parse(localStorage.getItem("wishlistObj"));
-
-  const [wishlist, setWishlist] = useState(wishlistObj);
+  const { wishlistObj } = JSON.parse(localStorage.getItem("wishlistObj")) || {
+    wishlistObj: []
+  };
 
   const { cartlistObj } = JSON.parse(localStorage.getItem("cartlistObj")) || {
     cartlistObj: []
@@ -33,95 +22,138 @@ export const Cart = () => {
 
   const [cart, setCart] = useState(cartlistObj);
 
-  async function CallCart() {
-    if (username) {
-      axios
-        .post("https://e-commerce.sandeepmehta215.repl.co/signup/cart", {
-          username: username
-        })
-        .then((resp) => {
-          setPopUp("none");
+  const [quantity, setQuantity] = useState({
+    cartquantity: cartlistObj.length,
+    wishlistquantity: wishlistObj.length
+  });
 
-          if (typeof resp.data.cart === "object") {
-            localStorage.setItem(
-              "cartlistObj",
-              JSON.stringify({ cartlistObj: resp.data.cart })
-            );
+  const notifyCart = () =>
+    toast.success("Updating Cart", {
+      position: "bottom-center",
+      autoClose: 2000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined
+    });
 
-            setCart(resp.data.cart);
+  async function DecrementCartItem(_id) {
+    notifyCart();
+    const response = await axios.post(
+      "https://e-commerce.sandeepmehta215.repl.co/updatecart/decrementcartitem",
+      {
+        username: username,
+        cartids: _id
+      }
+    );
 
-            setCartQuantity(resp.data.cart.length);
+    if (typeof response.data.cart === "object") {
+      localStorage.setItem(
+        "cartlistObj",
+        JSON.stringify({ cartlistObj: response.data.cart })
+      );
 
-            localStorage.setItem(
-              "cartlistLength",
-              JSON.stringify({ cartLength: resp.data.cart.length })
-            );
-          } else {
-            setCart([]);
-          }
-        });
+      localStorage.setItem(
+        "cartlistLength",
+        JSON.stringify({ cartLength: response.data.cart.length })
+      );
+      if (username) {
+        setQuantity({ ...quantity, cartquantity: response.data.cart.length });
+        setCart(response.data.cart);
+      }
     }
   }
 
-  async function CallWishList() {
-    if (username)
-      axios
-        .post("https://e-commerce.sandeepmehta215.repl.co/signup/wishlist", {
-          username: username
-        })
-        .then((resp) => {
-          if (typeof resp.data.wishlist === "object") {
-            localStorage.setItem(
-              "wishlistObj",
-              JSON.stringify({ wishlistObj: resp.data.wishlist })
-            );
+  async function IncrementCartItem(_id) {
+    notifyCart();
+    const response = await axios.post(
+      "https://e-commerce.sandeepmehta215.repl.co/updatecart/incrementcartitem",
+      {
+        username: username,
+        cartids: _id
+      }
+    );
 
-            setWishlist(resp.data.wishlist);
+    if (typeof response.data.cart === "object") {
+      localStorage.setItem(
+        "cartlistObj",
+        JSON.stringify({ cartlistObj: response.data.cart })
+      );
 
-            setPopUp("none");
-
-            localStorage.setItem(
-              "wishlistLength",
-              JSON.stringify({ wishlistLength: resp.data.wishlist.length })
-            );
-
-            setWishListQuantity(resp.data.wishlist.length);
-          } else {
-            setWishlist([]);
-          }
-        });
+      localStorage.setItem(
+        "cartlistLength",
+        JSON.stringify({ cartLength: response.data.cart.length })
+      );
+      if (username) {
+        setQuantity({ ...quantity, cartquantity: response.data.cart.length });
+        setCart(response.data.cart);
+      }
+    }
   }
+
+  async function RemoveFromCart(_id) {
+    notifyCart();
+    const response = await axios.post(
+      "https://e-commerce.sandeepmehta215.repl.co/updatecart/removefromcart",
+      {
+        username: username,
+        cartids: _id
+      }
+    );
+
+    if (typeof response.data.cart === "object") {
+      localStorage.setItem(
+        "cartlistObj",
+        JSON.stringify({ cartlistObj: response.data.cart })
+      );
+
+      localStorage.setItem(
+        "cartlistLength",
+        JSON.stringify({ cartLength: response.data.cart.length })
+      );
+      if (username) {
+        setQuantity({ ...quantity, cartquantity: response.data.cart.length });
+        setCart(response.data.cart);
+      }
+    }
+  }
+
+  useEffect(
+    () =>
+      (async function () {
+        const responseForCart = await axios.post(
+          "https://e-commerce.sandeepmehta215.repl.co/updatecart",
+          {
+            username: username
+          }
+        );
+        if (username) setCart(responseForCart.data.cart);
+      })(),
+    []
+  );
 
   return (
     <>
       <div className="cartTotalQuantity">
-        <strong>{cartTotalQuantity}</strong>
+        <strong>{quantity.cartquantity}</strong>
       </div>
       <div className="wishListTotalQuantity">
-        <strong>{wishListQuantity}</strong>
+        <strong>{quantity.wishlistquantity}</strong>
       </div>
+      <ToastContainer />
       <>
         <div className="cartDetails">
           <h2> Shopping Cart </h2>
-          <div className="snackBar" style={{ display: popUp }}>
-            Updating Cart.....
-          </div>
-          <div className="cartTotalQuantity">
-            <strong>{cartTotalQuantity}</strong>
-          </div>
-          <div className="wishListTotalQuantity">
-            <strong>{wishListQuantity}</strong>
-          </div>
 
           <div className="cartCheckOut">
             <h2>
               <strong>Check Out to here</strong>{" "}
             </h2>
-            <h3>Cart Total Quantity : {cartTotalQuantity} </h3>
-            {/* <h3>Cart Total Price : {cartTotalPrice} </h3> */}
+            <h3>Cart Total Quantity : {quantity.cartquantity} </h3>
           </div>
 
-          {cartTotalQuantity === 0 && (
+          {quantity.cartquantity === 0 && (
             <div className="cartEmptyCard">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -150,10 +182,11 @@ export const Cart = () => {
           <ul>
             {itemsInProduct.map((obj) => {
               return (
-                <div>
+                <div key={obj.id}>
                   {cart
                     .map((cartObj) => {
-                      if (cartObj !== obj.id) return obj;
+                      if (cartObj.cartid !== obj.id) return obj;
+                      // return undefined;
                     })
                     .filter((key) => key !== undefined).length < cart.length ? (
                     <li
@@ -200,34 +233,31 @@ export const Cart = () => {
                         <button
                           className="decButton"
                           onClick={() => {
-                            // setPopUp("block");
-
-                            productDispatch({ type: "decrement", obj });
+                            DecrementCartItem(obj.id);
                           }}
                         >
                           -
                         </button>
+
                         <button
                           className="incButton"
                           onClick={() => {
-                            setTimeout(() => setPopUp("block"), 1000);
-                            productDispatch({ type: "increment", obj });
+                            IncrementCartItem(obj.id);
                           }}
                         >
                           +
                         </button>
-                        <div>Cart quantity : {obj.quantity} </div>
+                        <div>
+                          Cart quantity :
+                          {
+                            cart.find((cartObj) => cartObj.cartid === obj.id)
+                              .cartidquantity
+                          }
+                        </div>
                         <button
                           className="cartbi-trashButton"
                           onClick={() => {
-                            setPopUp("block");
-
-                            productDispatch({
-                              type: "REMOVE_FROM_CART",
-                              obj
-                            });
-
-                            setTimeout(() => CallCart(), 800);
+                            RemoveFromCart(obj.id);
                           }}
                         >
                           Remove From Cart
@@ -241,10 +271,6 @@ export const Cart = () => {
               );
             })}
           </ul>
-          <span style={{ visibility: "hidden" }}>
-            {popUp === "block" && (document.body.style.opacity = 0.7)}
-            {popUp === "none" && (document.body.style.opacity = 1)}
-          </span>
         </div>
       </>
     </>
